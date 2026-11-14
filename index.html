@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Society Khata</title>
+<meta name="theme-color" content="#223E8C" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D121A" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Khata">
+<style>
+/* Layout: ek single-column khata. Upar society ka naam + mahine ka stepper, beech mein ruled-ledger rows
+   (flat no | naam | status), neeche angootha-pahunch wali fixed tab bar. Sab system fonts, offline-safe. */
+:root {
+  --bg: #F1F4F8; --surface: #FFFFFF; --surface-2: #E8EDF4; --ink: #131A26; --ink-2: #4C586B; --line: #D6DDE8;
+  --accent: #223E8C; --accent-ink: #FFFFFF; --accent-soft: #E2E9F8;
+  --ok: #17703F; --ok-soft: #DAF0E3; --bad: #AE3326; --bad-soft: #F8E0DC; --warn: #85560A; --warn-soft: #FAEBC6;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Roboto Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0D121A; --surface: #161D28; --surface-2: #1F2836; --ink: #E7ECF4; --ink-2: #9CA8BC; --line: #2B3649;
+    --accent: #93AAF2; --accent-ink: #0D1632; --accent-soft: #1E2A4C;
+    --ok: #5FCB8D; --ok-soft: #14301F; --bad: #F2897D; --bad-soft: #3A1D1A; --warn: #E5B44E; --warn-soft: #382A0B;
+  }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { color-scheme: light dark; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.45;
+  padding-top: max(16px, env(safe-area-inset-top, 0px));
+  padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.app { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+h1, h2 { margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 { font-size: 1.65rem; line-height: 1.12; font-weight: 750; }
+h2 { font-size: 1.1rem; font-weight: 700; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.kicker { font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); font-weight: 650; }
+.muted { color: var(--ink-2); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+#head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.brand { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.brand h1 { overflow-wrap: anywhere; }
+.stepper { display: flex; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.stepper button { width: 52px; height: 52px; border: 0; background: none; font-size: 1.6rem; cursor: pointer; color: var(--accent); border-radius: 12px; }
+.stepper span { min-width: 8.5rem; text-align: center; font-weight: 700; }
+
+#nav { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); z-index: 10;
+  padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+#nav .in { max-width: 720px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
+#nav button { border: 0; background: none; min-height: 64px; padding: 8px 2px 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--ink-2); font-size: .68rem; font-weight: 650; cursor: pointer; }
+#nav button svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#nav button[aria-current="page"] { color: var(--accent); }
+#nav button[aria-current="page"] svg { stroke-width: 2.4; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.hero { gap: 10px; }
+.hero-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.big { font-size: 1.9rem; font-weight: 650; line-height: 1; }
+.big small { font-size: .95rem; color: var(--ink-2); font-weight: 400; }
+.bar { height: 12px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--ok); border-radius: 99px; }
+.banner { background: var(--warn-soft); color: var(--warn); border-radius: 12px; padding: 12px 14px; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; font-size: .92rem; }
+.banner.bad { background: var(--bad-soft); color: var(--bad); }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; min-height: 44px; padding: 8px 18px; cursor: pointer; font-weight: 600; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+.ledger { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.row { padding: 14px; display: grid; grid-template-columns: 3.4rem minmax(0, 1fr) auto; gap: 6px 12px; align-items: center; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.no { font-family: var(--font-mono); font-weight: 700; background: var(--surface-2); border-radius: 10px; padding: 8px 0; text-align: center; }
+.who { min-width: 0; display: flex; flex-direction: column; }
+.who b { font-weight: 650; overflow-wrap: anywhere; }
+.who .sub { font-size: .84rem; color: var(--ink-2); overflow-wrap: anywhere; }
+.amt { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; font-weight: 650; }
+.acts { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; padding-top: 4px; }
+.acts .btn { flex: 1 1 150px; }
+.pill { display: inline-block; font-size: .76rem; font-weight: 650; padding: 3px 10px; border-radius: 99px; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+.side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; min-height: 52px; padding: 10px 16px; font-weight: 650; cursor: pointer; text-decoration: none; color: var(--ink); display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-align: center; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.wa { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+.btn.danger { color: var(--bad); }
+.btn.danger.sure { background: var(--bad); color: #fff; border-color: var(--bad); }
+.btn.block { width: 100%; }
+.panel { grid-column: 1 / -1; background: var(--surface-2); border-radius: 12px; padding: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; align-items: end; }
+.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.field label { font-size: .8rem; font-weight: 650; color: var(--ink-2); }
+.field input, .field select, .field textarea { width: 100%; min-height: 52px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--surface); }
+.field textarea { min-height: 110px; resize: vertical; font-family: var(--font-mono); font-size: .88rem; }
+.form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; align-items: end; }
+.form .wide { grid-column: 1 / -1; }
+.form-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.form-acts .btn { flex: 1 1 150px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tile .v { font-family: var(--font-mono); font-weight: 650; font-size: 1.3rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.tile.pos .v { color: var(--ok); } .tile.neg .v { color: var(--bad); }
+.cat { display: grid; grid-template-columns: 5.5rem 1fr auto; gap: 10px; align-items: center; font-size: .92rem; }
+.cat .bar { height: 9px; } .cat .bar i { background: var(--accent); }
+.empty { text-align: center; padding: 28px 16px; color: var(--ink-2); display: flex; flex-direction: column; gap: 12px; align-items: center; }
+details summary { cursor: pointer; font-weight: 650; color: var(--accent); min-height: 44px; display: flex; align-items: center; }
+#toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 12px; font-weight: 550; max-width: calc(100vw - 32px); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 20; text-align: center; }
+#toast.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+@media (max-width: 380px) { .row { grid-template-columns: 3rem minmax(0, 1fr) auto; } .stepper span { min-width: 7rem; } #nav button { font-size: .62rem; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header id="head"></header>
+  <main id="view"></main>
+</div>
+<nav id="nav" aria-label="Sections"><div class="in" id="navin"></div></nav>
+<div id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="impfile" accept="application/json,.json" hidden>
+
+<script>
+(() => {
+'use strict';
+const KEY = 'societyKhata.v1';
+const ICONS = {
+  maintenance: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  kharche: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+  summary: '<path d="M5 20V10M12 20V4M19 20v-7"/>',
+  flats: '<path d="M5 21V4h9v17M14 9h5v12M8 8h3M8 12h3M8 16h3M3 21h18"/>',
+  setting: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>'
+};
+const TABS = [['maintenance', 'Maintenance'], ['kharche', 'Kharche'], ['summary', 'Summary'], ['flats', 'Flats'], ['setting', 'Setting']];
+const CATS = ['Safai', 'Bijli', 'Paani', 'Security', 'Repair', 'Lift', 'Tyohaar', 'Anya'];
+const MODES = ['Cash', 'UPI', 'Cheque'];
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad = (n) => String(n).padStart(2, '0');
+const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const money = (n) => '₹' + Math.round(Number(n) || 0).toLocaleString('en-IN');
+const sum = (a, k) => a.reduce((t, x) => t + (Number(x[k]) || 0), 0);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const num = (v) => { const n = parseFloat(String(v == null ? '' : v).replace(/,/g, '')); return isFinite(n) ? n : 0; };
+const mLabel = (m) => { const p = m.split('-'); return new Date(+p[0], +p[1] - 1, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }); };
+const mShort = (m) => { const p = m.split('-'); return new Date(+p[0], +p[1] - 1, 1).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }); };
+const shift = (m, n) => { const p = m.split('-'); const d = new Date(+p[0], +p[1] - 1 + n, 1); return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
+const dLabel = (s) => { if (!s) return ''; const p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }); };
+const natural = (a, b) => String(a.no || '').localeCompare(String(b.no || ''), undefined, { numeric: true });
+const flatKey = (no) => String(no).trim().toLowerCase();
+
+/* ---------- data ---------- */
+const blank = () => ({ society: 'Meri Society', monthly: 1500, opening: 0, flats: [], payments: [], expenses: [], lastExport: null });
+
+function normalize(raw) {
+  if (!raw || typeof raw !== 'object') throw new Error('File sahi format mein nahi hai');
+  const src = raw.data && typeof raw.data === 'object' ? raw.data : raw;
+  if (!Array.isArray(src.flats) && !Array.isArray(src.payments) && !Array.isArray(src.expenses)) throw new Error('Is file mein khata ka data nahi mila');
+  const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
+  const nm = (v) => { const n = Number(v); return isFinite(n) && n >= 0 ? n : 0; };
+  const out = blank();
+  out.society = str(src.society, 60) || out.society;
+  if (src.monthly != null) out.monthly = nm(src.monthly);
+  out.opening = isFinite(Number(src.opening)) ? Number(src.opening) : 0;
+  const ids = {};
+  (Array.isArray(src.flats) ? src.flats : []).forEach((f) => {
+    if (!f || typeof f !== 'object') return;
+    const id = str(f.id, 40) || uid(), no = str(f.no, 20);
+    if (!no || ids[id]) return;
+    ids[id] = 1;
+    out.flats.push({ id, no, owner: str(f.owner, 60), phone: str(f.phone, 20), monthly: nm(f.monthly) > 0 ? nm(f.monthly) : null });
+  });
+  (Array.isArray(src.payments) ? src.payments : []).forEach((p) => {
+    if (!p || typeof p !== 'object' || !ids[str(p.flat, 40)]) return;
+    const amount = nm(p.amount);
+    if (!(amount > 0) || !/^\d{4}-\d{2}$/.test(str(p.month, 7))) return;
+    out.payments.push({ id: str(p.id, 40) || uid(), flat: str(p.flat, 40), month: str(p.month, 7), amount, mode: MODES.includes(p.mode) ? p.mode : 'Cash', date: /^\d{4}-\d{2}-\d{2}$/.test(str(p.date, 10)) ? str(p.date, 10) : '' });
+  });
+  (Array.isArray(src.expenses) ? src.expenses : []).forEach((e) => {
+    if (!e || typeof e !== 'object') return;
+    const amount = nm(e.amount), date = str(e.date, 10);
+    if (!(amount > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    out.expenses.push({ id: str(e.id, 40) || uid(), date, month: date.slice(0, 7), cat: str(e.cat, 30) || 'Anya', desc: str(e.desc, 120), amount });
+  });
+  out.lastExport = /^\d{4}-\d{2}-\d{2}/.test(str(src.lastExport, 10)) ? str(src.lastExport, 10) : null;
+  out.flats.sort(natural);
+  return out;
+}
+
+let D = blank();
+const S = { month: ymd(new Date()).slice(0, 7), tab: 'maintenance', filter: 'all', draft: {}, paying: null, confirm: null, editing: null, pending: null, storeOk: true, installEvt: null };
+const dv = (k, fb) => (S.draft[k] != null ? S.draft[k] : fb);
+
+function loadData() {
+  let raw = null;
+  try { raw = localStorage.getItem(KEY); } catch (e) { S.storeOk = false; return; }
+  if (!raw) return;
+  try { D = normalize(JSON.parse(raw)); }
+  catch (e) {
+    try { localStorage.setItem(KEY + '.corrupt', raw); } catch (e2) { /* ignore */ }
+    S.loadErr = true;
+  }
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(D)); S.storeOk = true; return true; }
+  catch (e) { S.storeOk = false; toast('Phone mein save nahi hua. Storage bhara ya band hai, Export kar lein.'); return false; }
+}
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), 3200);
+}
+
+/* ---------- derived numbers ---------- */
+const dueOf = (f) => (Number(f.monthly) > 0 ? Number(f.monthly) : Number(D.monthly) || 0);
+function rows(m) {
+  const map = {};
+  D.payments.forEach((p) => {
+    if (p.month !== m) return;
+    const o = map[p.flat] || (map[p.flat] = { sum: 0, n: 0, last: null });
+    o.sum += p.amount; o.n++;
+    if (!o.last || (p.date || '') >= (o.last.date || '')) o.last = p;
+  });
+  return D.flats.map((f) => {
+    const due = dueOf(f), o = map[f.id], paid = o ? o.sum : 0;
+    return { f, o, due, paid, baaki: Math.max(due - paid, 0), st: due > 0 && paid >= due ? 'paid' : (paid > 0 ? 'part' : 'baaki') };
+  });
+}
+function waLink(phone, msg) {
+  const d = String(phone || '').replace(/\D/g, ''); let n = '';
+  if (d.length === 10) n = '91' + d; else if (d.length >= 11) n = d;
+  return 'https://wa.me/' + n + '?text=' + encodeURIComponent(msg);
+}
+function reminderText(r) {
+  const who = r.f.owner ? r.f.owner + ' ji' : 'Resident';
+  const extra = r.paid > 0 ? ' (' + money(r.paid) + ' mil chuka hai)' : '';
+  return 'Namaste ' + who + ',\nFlat ' + r.f.no + ' ka ' + mLabel(S.month) + ' ka maintenance ' + money(r.baaki) + ' baaki hai' + extra + '. Kripya jaldi jama kar dein.\nDhanyavaad,\n' + D.society + ' Treasurer';
+}
+function daysSince(s) {
+  if (!s) return Infinity;
+  const p = s.split('-'); return Math.floor((Date.now() - new Date(+p[0], +p[1] - 1, +p[2]).getTime()) / 86400000);
+}
+
+/* ---------- views ---------- */
+function renderChrome() {
+  $('#head').innerHTML =
+    '<div class="brand"><span class="kicker">Treasurer khata</span><h1>' + esc(D.society) + '</h1></div>' +
+    '<div class="stepper"><button data-act="mprev" aria-label="Pichla mahina">‹</button><span>' + esc(mLabel(S.month)) + '</span><button data-act="mnext" aria-label="Agla mahina">›</button></div>';
+  $('#navin').innerHTML = TABS.map((t) =>
+    '<button data-act="tab" data-v="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : '') + '><svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[t[0]] + '</svg>' + t[1] + '</button>').join('');
+}
+function banners() {
+  let h = '';
+  if (!S.storeOk) h += '<div class="banner bad">Is browser mein data save nahi ho sakta (private mode ya storage band). Jo daalenge wo band karte hi ud jayega.</div>';
+  if (S.loadErr) h += '<div class="banner bad">Purana data padha nahi ja saka, isliye khata khali dikh raha hai. Purani copy phone mein alag rakhi gayi hai; Setting mein purana backup Import kar sakte hain.</div>';
+  if (D.flats.length && daysSince(D.lastExport) >= 30)
+    h += '<div class="banner"><span>' + (D.lastExport ? daysSince(D.lastExport) + ' din se backup nahi liya.' : 'Abhi tak backup nahi liya.') + ' Data sirf is phone mein hai.</span><button class="btn" data-act="tab" data-v="setting">Backup lo</button></div>';
+  return h;
+}
+function vMaint() {
+  const rs = rows(S.month);
+  if (!rs.length) return '<div class="card empty"><b>Abhi koi flat nahi hai</b><span>Pehle Flats tab mein flats ka naam aur WhatsApp number daalein. Phir yahan har mahine ka paid/baaki dikhega.</span><button class="btn primary" data-act="tab" data-v="flats">Flats add karo</button></div>';
+  const due = sum(rs, 'due'), got = rs.reduce((t, r) => t + Math.min(r.paid, r.due || r.paid), 0);
+  const nPaid = rs.filter((r) => r.st === 'paid').length, nBaaki = rs.length - nPaid, baakiAmt = sum(rs, 'baaki');
+  const pct = due ? Math.min(100, got / due * 100) : 0, cnt = { all: rs.length, baaki: nBaaki, paid: nPaid };
+  const list = rs.filter((r) => S.filter === 'all' || (S.filter === 'paid' ? r.st === 'paid' : r.st !== 'paid'));
+  let h = '<section class="card hero"><div class="hero-top"><span class="kicker">' + esc(mLabel(S.month)) + ' ka maintenance</span><span class="mono big">' + money(got) + ' <small>/ ' + money(due) + '</small></span></div>' +
+    '<div class="bar" role="img" aria-label="' + Math.round(pct) + ' percent jama"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
+    '<div class="muted">' + nPaid + ' flat paid · ' + nBaaki + ' baaki · <b class="mono">' + money(baakiAmt) + '</b> aana baaki</div></section>';
+  h += '<div class="chips">' + [['all', 'Sab'], ['baaki', 'Baaki'], ['paid', 'Paid']].map((c) =>
+    '<button class="chip" data-act="filter" data-v="' + c[0] + '" aria-pressed="' + (S.filter === c[0]) + '">' + c[1] + ' (' + cnt[c[0]] + ')</button>').join('') + '</div>';
+  if (!list.length) return h + '<div class="card empty">Is filter mein koi flat nahi hai.</div>';
+  h += '<ul class="ledger">' + list.map((r) => {
+    const pill = r.st === 'paid' ? '<span class="pill ok">Paid</span>' : r.st === 'part' ? '<span class="pill warn">Aanshik</span>' : '<span class="pill bad">Baaki</span>';
+    const sub = r.o ? 'Mila ' + money(r.paid) + ' · ' + esc(r.o.last.mode) + (r.o.last.date ? ' · ' + esc(dLabel(r.o.last.date)) : '') + (r.o.n > 1 ? ' · ' + r.o.n + ' baar' : '') : esc(r.f.phone || 'Phone nahi diya');
+    let acts = '';
+    if (r.baaki > 0) acts += '<button class="btn primary" data-act="payopen" data-id="' + esc(r.f.id) + '">Paid mark karo</button>';
+    if (r.baaki > 0) acts += '<a class="btn wa" target="_blank" rel="noopener" href="' + esc(waLink(r.f.phone, reminderText(r))) + '">WhatsApp reminder</a>';
+    if (r.o) {
+      const key = 'undo:' + r.f.id;
+      acts += S.confirm === key
+        ? '<button class="btn danger sure" data-act="payundo" data-id="' + esc(r.f.id) + '">Pakka hatao?</button><button class="btn" data-act="noask">Nahi</button>'
+        : '<button class="btn danger" data-act="ask" data-v="' + esc(key) + '">Payment hatao</button>';
+    }
+    let panel = '';
+    if (S.paying === r.f.id) {
+      panel = '<div class="panel">' +
+        '<div class="field"><label for="pAmt">Ab mila (₹)</label><input id="pAmt" inputmode="decimal" data-k="pAmt" value="' + esc(dv('pAmt', r.baaki)) + '"></div>' +
+        '<div class="field"><label for="pMode">Kaise</label><select id="pMode" data-k="pMode">' + MODES.map((m) => '<option' + (dv('pMode', 'UPI') === m ? ' selected' : '') + '>' + m + '</option>').join('') + '</select></div>' +
+        '<div class="field"><label for="pDate">Tareekh</label><input id="pDate" type="date" data-k="pDate" value="' + esc(dv('pDate', ymd(new Date()))) + '"></div>' +
+        '<div class="form-acts"><button class="btn primary" data-act="paysave" data-id="' + esc(r.f.id) + '">Save</button><button class="btn" data-act="payclose">Band karo</button></div></div>';
+    }
+    return '<li class="row"><div class="no">' + esc(r.f.no) + '</div><div class="who"><b>' + esc(r.f.owner || 'Naam nahi diya') + '</b><span class="sub">' + sub + '</span></div>' +
+      '<div class="side"><span class="amt">' + money(r.st === 'paid' ? r.paid : r.baaki) + '</span>' + pill + '</div>' +
+      (acts ? '<div class="acts">' + acts + '</div>' : '') + panel + '</li>';
+  }).join('') + '</ul>';
+  return h;
+}
+function vKharche() {
+  const list = D.expenses.filter((e) => e.month === S.month).sort((a, b) => b.date.localeCompare(a.date));
+  const total = sum(list, 'amount');
+  const defDate = ymd(new Date()).slice(0, 7) === S.month ? ymd(new Date()) : S.month + '-01';
+  let h = '<section class="card"><h2>Naya kharcha</h2><div class="form">' +
+    '<div class="field"><label for="eDate">Tareekh</label><input id="eDate" type="date" data-k="eDate" value="' + esc(dv('eDate', defDate)) + '"></div>' +
+    '<div class="field"><label for="eCat">Kis cheez ka</label><select id="eCat" data-k="eCat">' + CATS.map((c) => '<option' + (dv('eCat', 'Safai') === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select></div>' +
+    '<div class="field"><label for="eAmt">Amount (₹)</label><input id="eAmt" inputmode="decimal" data-k="eAmt" value="' + esc(dv('eAmt', '')) + '" placeholder="0"></div>' +
+    '<div class="field wide"><label for="eDesc">Detail</label><input id="eDesc" data-k="eDesc" value="' + esc(dv('eDesc', '')) + '" placeholder="jaise: guard ki salary, motor repair"></div>' +
+    '</div><div class="form-acts"><button class="btn primary" data-act="expsave">Kharcha jodo</button></div></section>';
+  h += '<div class="tiles"><div class="tile"><span class="kicker">' + esc(mShort(S.month)) + ' ka kharcha</span><span class="v">' + money(total) + '</span></div><div class="tile"><span class="kicker">Entries</span><span class="v">' + list.length + '</span></div></div>';
+  if (!list.length) return h + '<div class="card empty">Is mahine ka koi kharcha darj nahi hai.</div>';
+  h += '<ul class="ledger">' + list.map((e) => {
+    const key = 'exp:' + e.id;
+    const del = S.confirm === key
+      ? '<button class="btn danger sure" data-act="expdel" data-id="' + esc(e.id) + '">Pakka hatao?</button><button class="btn" data-act="noask">Nahi</button>'
+      : '<button class="btn danger" data-act="ask" data-v="' + esc(key) + '">Hatao</button>';
+    return '<li class="row"><div class="no">' + esc(dLabel(e.date).split(' ')[0]) + '</div><div class="who"><b>' + esc(e.desc || e.cat) + '</b><span class="sub">' + esc(e.cat) + ' · ' + esc(dLabel(e.date)) + '</span></div>' +
+      '<div class="side"><span class="amt">' + money(e.amount) + '</span></div><div class="acts">' + del + '</div></li>';
+  }).join('') + '</ul>';
+  return h;
+}
+function summaryData() {
+  const rs = rows(S.month), exps = D.expenses.filter((e) => e.month === S.month);
+  const got = sum(D.payments.filter((p) => p.month === S.month), 'amount'), spent = sum(exps, 'amount'), cats = {};
+  exps.forEach((e) => { cats[e.cat] = (cats[e.cat] || 0) + e.amount; });
+  const catList = Object.keys(cats).map((k) => [k, cats[k]]).sort((a, b) => b[1] - a[1]);
+  const pending = rs.filter((r) => r.baaki > 0);
+  return { rs, got, spent, net: got - spent, catList, pending, pendAmt: sum(pending, 'baaki'), cash: (Number(D.opening) || 0) + sum(D.payments, 'amount') - sum(D.expenses, 'amount'), nPaid: rs.length - pending.length };
+}
+function shareText(d) {
+  let t = D.society + ' · ' + mLabel(S.month) + ' ka hisaab\n\nMaintenance jama: ' + money(d.got) + ' (' + d.nPaid + '/' + d.rs.length + ' flats)\nKul kharcha: ' + money(d.spent) + '\nBachat: ' + money(d.net) + '\n';
+  if (d.catList.length) t += '\nKharche:\n' + d.catList.map((c) => '- ' + c[0] + ': ' + money(c[1])).join('\n') + '\n';
+  t += d.pending.length ? '\nBaaki (' + money(d.pendAmt) + '): Flat ' + d.pending.map((r) => r.f.no).join(', ') + '\nKripya jaldi jama karein.' : '\nSab flats ka maintenance jama ho gaya. Dhanyavaad!';
+  return t + '\n\nHath mein kul balance: ' + money(d.cash) + '\n- Treasurer';
+}
+function vSummary() {
+  if (!D.flats.length) return '<div class="card empty"><b>Summary tab tab bharega jab flats honge</b><button class="btn primary" data-act="tab" data-v="flats">Flats add karo</button></div>';
+  const d = summaryData(), top = d.catList.length ? d.catList[0][1] : 1, txt = shareText(d);
+  let h = '<div class="tiles">' +
+    '<div class="tile"><span class="kicker">Jama</span><span class="v">' + money(d.got) + '</span></div>' +
+    '<div class="tile"><span class="kicker">Kharcha</span><span class="v">' + money(d.spent) + '</span></div>' +
+    '<div class="tile ' + (d.net >= 0 ? 'pos' : 'neg') + '"><span class="kicker">Bachat</span><span class="v">' + money(d.net) + '</span></div>' +
+    '<div class="tile ' + (d.pendAmt ? 'neg' : 'pos') + '"><span class="kicker">Baaki</span><span class="v">' + money(d.pendAmt) + '</span></div></div>';
+  h += '<section class="card"><div class="hero-top"><span class="kicker">Society ke paas kul balance</span><span class="mono big">' + money(d.cash) + '</span></div><span class="muted">Shuruaati balance + ab tak ka sab jama − ab tak ka sab kharcha.</span></section>';
+  h += '<section class="card"><h2>Kharche kahan gaye</h2>' + (d.catList.length ? d.catList.map((c) =>
+    '<div class="cat"><span>' + esc(c[0]) + '</span><div class="bar"><i style="width:' + (c[1] / top * 100).toFixed(1) + '%"></i></div><span class="mono">' + money(c[1]) + '</span></div>').join('') : '<span class="muted">Is mahine koi kharcha nahi.</span>') + '</section>';
+  h += '<section class="card"><h2>Baaki wale flats</h2>' + (d.pending.length ? '<div class="chips">' + d.pending.map((r) => '<span class="pill bad mono">' + esc(r.f.no) + ' · ' + money(r.baaki) + '</span>').join('') + '</div>' : '<span class="muted">Sab ka maintenance jama hai.</span>') + '</section>';
+  h += '<section class="card"><h2>Group mein bhejne ke liye</h2><div class="field"><label for="sumtxt">Hisaab ka message</label><textarea id="sumtxt" readonly rows="9">' + esc(txt) + '</textarea></div>' +
+    '<div class="form-acts"><button class="btn primary" data-act="copysum">Copy karo</button><a class="btn wa" target="_blank" rel="noopener" href="' + esc('https://wa.me/?text=' + encodeURIComponent(txt)) + '">WhatsApp pe bhejo</a></div></section>';
+  return h;
+}
+function vFlats() {
+  const editing = S.editing && D.flats.find((f) => f.id === S.editing);
+  let h = '<section class="card"><h2>' + (editing ? 'Flat ' + esc(editing.no) + ' badlo' : 'Naya flat') + '</h2><div class="form">' +
+    '<div class="field"><label for="fNo">Flat no.</label><input id="fNo" data-k="fNo" value="' + esc(dv('fNo', editing ? editing.no : '')) + '" placeholder="101"></div>' +
+    '<div class="field"><label for="fOwner">Naam</label><input id="fOwner" data-k="fOwner" value="' + esc(dv('fOwner', editing ? editing.owner : '')) + '"></div>' +
+    '<div class="field"><label for="fPhone">WhatsApp number</label><input id="fPhone" inputmode="tel" data-k="fPhone" value="' + esc(dv('fPhone', editing ? editing.phone : '')) + '" placeholder="98XXXXXXXX"></div>' +
+    '<div class="field"><label for="fAmt">Alag maintenance (₹, khali = sabka same)</label><input id="fAmt" inputmode="decimal" data-k="fAmt" value="' + esc(dv('fAmt', editing && editing.monthly ? editing.monthly : '')) + '"></div>' +
+    '</div><div class="form-acts"><button class="btn primary" data-act="flatsave">' + (editing ? 'Update karo' : 'Flat jodo') + '</button>' + (editing ? '<button class="btn" data-act="flatcancel">Rehne do</button>' : '') + '</div>' +
+    '<details><summary>Ek saath bahut saare flats jodo</summary><div class="field" style="margin-top:10px"><label for="bulk">Har line: flat no, naam, phone (aur chahein to alag amount)</label><textarea id="bulk" data-k="bulk" placeholder="101, Sharma, 9876543210&#10;102, Verma, 9812345678">' + esc(dv('bulk', '')) + '</textarea></div><div class="form-acts" style="margin-top:10px"><button class="btn" data-act="bulksave">Sab jodo</button></div></details></section>';
+  if (!D.flats.length) return h + '<div class="card empty">Abhi koi flat nahi hai. Upar se pehla flat jodo.</div>';
+  h += '<ul class="ledger">' + D.flats.map((f) => {
+    const key = 'flat:' + f.id;
+    const del = S.confirm === key
+      ? '<button class="btn danger sure" data-act="flatdel" data-id="' + esc(f.id) + '">Pakka hatao?</button><button class="btn" data-act="noask">Nahi</button>'
+      : '<button class="btn danger" data-act="ask" data-v="' + esc(key) + '">Hatao</button>';
+    return '<li class="row"><div class="no">' + esc(f.no) + '</div><div class="who"><b>' + esc(f.owner || 'Naam nahi diya') + '</b><span class="sub">' + esc(f.phone || 'Phone nahi diya') + '</span></div>' +
+      '<div class="side"><span class="amt">' + money(dueOf(f)) + '</span><span class="muted" style="font-size:.76rem">' + (Number(f.monthly) > 0 ? 'alag rate' : 'mahina') + '</span></div>' +
+      '<div class="acts"><button class="btn" data-act="flatedit" data-id="' + esc(f.id) + '">Badlo</button>' + del + '</div></li>';
+  }).join('') + '</ul>';
+  return h;
+}
+function vSetting() {
+  const last = D.lastExport ? dLabel(D.lastExport) + ' (' + daysSince(D.lastExport) + ' din pehle)' : 'Abhi tak nahi';
+  let h = '<section class="card"><h2>Society ki settings</h2><div class="form">' +
+    '<div class="field wide"><label for="sName">Society ka naam</label><input id="sName" data-k="sName" value="' + esc(dv('sName', D.society)) + '"></div>' +
+    '<div class="field"><label for="sMonthly">Mahine ka maintenance (₹)</label><input id="sMonthly" inputmode="decimal" data-k="sMonthly" value="' + esc(dv('sMonthly', D.monthly)) + '"></div>' +
+    '<div class="field"><label for="sOpen">Shuruaati balance (₹)</label><input id="sOpen" inputmode="decimal" data-k="sOpen" value="' + esc(dv('sOpen', D.opening)) + '"></div>' +
+    '</div><div class="form-acts"><button class="btn primary" data-act="setsave">Settings save karo</button></div></section>';
+  h += '<section class="card"><h2>Backup</h2><span class="muted">Saara data sirf is phone ke browser mein hai. Phone badalne ya browser ka data saaf karne se pehle Export zaroor karein. Aakhri backup: <b>' + esc(last) + '</b></span>' +
+    '<div class="form-acts"><button class="btn primary" data-act="export">Export (JSON file)</button><button class="btn" data-act="pickfile">Import (backup wapas lao)</button></div>';
+  if (S.pending) {
+    const c = S.pending;
+    h += '<div class="banner"><span><b>' + esc(c.name) + '</b> mein ' + c.d.flats.length + ' flats, ' + c.d.payments.length + ' payments, ' + c.d.expenses.length + ' kharche hain' + (c.skipped ? ' (' + c.skipped + ' galat entries chhod di)' : '') + '. Import karne par abhi ka sab data badal jayega.</span></div>' +
+      '<div class="form-acts"><button class="btn danger sure" data-act="importyes">Haan, replace karo</button><button class="btn" data-act="importno">Rehne do</button></div>';
+  }
+  h += '</section>';
+  if (S.installEvt) h += '<section class="card"><h2>App install karo</h2><span class="muted">Home screen par icon aa jayega aur bina internet ke bhi khulega.</span><button class="btn primary" data-act="install">Install karo</button></section>';
+  else h += '<section class="card"><h2>Home screen par lagao</h2><span class="muted">Android Chrome: menu → "Install app" ya "Add to Home screen". iPhone Safari: Share → "Add to Home Screen".</span></section>';
+  h += '<section class="card"><h2>Sab kuch mita do</h2><span class="muted">Naya khata shuru karna ho to. Pehle Export kar lein.</span>' +
+    (S.confirm === 'reset'
+      ? '<div class="form-acts"><button class="btn danger sure" data-act="resetyes">Pakka, sab mita do</button><button class="btn" data-act="noask">Nahi</button></div>'
+      : '<button class="btn danger" data-act="ask" data-v="reset">Saara data mita do</button>') + '</section>';
+  return h;
+}
+function render() {
+  renderChrome();
+  $('#view').innerHTML = banners() + ({ maintenance: vMaint, kharche: vKharche, summary: vSummary, flats: vFlats, setting: vSetting }[S.tab])();
+}
+
+/* ---------- actions ---------- */
+const clearFlatDraft = () => { S.draft.fNo = S.draft.fOwner = S.draft.fPhone = S.draft.fAmt = undefined; };
+function commit(msg) { const ok = save(); if (ok && msg) toast(msg); render(); return ok; }
+function download(name, text) {
+  const u = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  const a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(u), 5000);
+}
+const actions = {
+  tab: (el) => { location.hash = el.dataset.v; },
+  mprev: () => { S.month = shift(S.month, -1); S.paying = null; render(); },
+  mnext: () => { S.month = shift(S.month, 1); S.paying = null; render(); },
+  filter: (el) => { S.filter = el.dataset.v; render(); },
+  ask: (el) => { S.confirm = el.dataset.v; render(); },
+  noask: () => { S.confirm = null; render(); },
+  payopen: (el) => { S.paying = el.dataset.id; S.draft.pAmt = undefined; S.draft.pDate = undefined; render(); },
+  payclose: () => { S.paying = null; render(); },
+  paysave: (el) => {
+    const id = el.dataset.id, r = rows(S.month).find((x) => x.f.id === id);
+    if (!r) return;
+    const add = S.draft.pAmt != null ? num(S.draft.pAmt) : r.baaki;
+    if (!(add > 0)) return toast('Sahi amount daalo');
+    D.payments.push({ id: uid(), flat: id, month: S.month, amount: add, mode: dv('pMode', 'UPI'), date: dv('pDate', ymd(new Date())) });
+    S.paying = null; commit('Flat ' + r.f.no + ' ka payment mark ho gaya');
+  },
+  payundo: (el) => { S.confirm = null; D.payments = D.payments.filter((p) => !(p.flat === el.dataset.id && p.month === S.month)); commit('Payment hata diya'); },
+  expsave: () => {
+    const amt = num(S.draft.eAmt), date = dv('eDate', ymd(new Date()));
+    if (!(amt > 0)) return toast('Amount daalo');
+    if (!date) return toast('Tareekh chuno');
+    D.expenses.push({ id: uid(), date, month: date.slice(0, 7), cat: dv('eCat', 'Safai'), desc: String(S.draft.eDesc || '').trim().slice(0, 120), amount: amt });
+    S.draft.eAmt = ''; S.draft.eDesc = ''; commit('Kharcha jud gaya');
+  },
+  expdel: (el) => { S.confirm = null; D.expenses = D.expenses.filter((e) => e.id !== el.dataset.id); commit('Kharcha hata diya'); },
+  setsave: () => {
+    D.society = String(dv('sName', D.society)).trim().slice(0, 60) || 'Meri Society';
+    D.monthly = num(dv('sMonthly', D.monthly)); D.opening = num(dv('sOpen', D.opening));
+    S.draft.sName = S.draft.sMonthly = S.draft.sOpen = undefined; commit('Settings save ho gayi');
+  },
+  flatsave: () => {
+    const cur = S.editing && D.flats.find((f) => f.id === S.editing);
+    const no = String(dv('fNo', cur ? cur.no : '')).trim().slice(0, 20);
+    if (!no) return toast('Flat number daalo');
+    if (D.flats.some((f) => flatKey(f.no) === flatKey(no) && (!cur || f.id !== cur.id))) return toast('Ye flat number pehle se hai');
+    const amt = num(dv('fAmt', cur && cur.monthly ? cur.monthly : ''));
+    const rec = { id: cur ? cur.id : uid(), no, owner: String(dv('fOwner', cur ? cur.owner : '')).trim().slice(0, 60), phone: String(dv('fPhone', cur ? cur.phone : '')).trim().slice(0, 20), monthly: amt > 0 ? amt : null };
+    if (cur) D.flats[D.flats.indexOf(cur)] = rec; else D.flats.push(rec);
+    D.flats.sort(natural); S.editing = null; clearFlatDraft(); commit('Flat ' + no + ' save ho gaya');
+  },
+  flatedit: (el) => { S.editing = el.dataset.id; clearFlatDraft(); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); },
+  flatcancel: () => { S.editing = null; clearFlatDraft(); render(); },
+  flatdel: (el) => {
+    const id = el.dataset.id; S.confirm = null;
+    D.payments = D.payments.filter((p) => p.flat !== id); D.flats = D.flats.filter((f) => f.id !== id); commit('Flat hata diya');
+  },
+  bulksave: () => {
+    const lines = String(S.draft.bulk || '').split(/\n/).map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) return toast('Pehle list paste karein');
+    let added = 0, skipped = 0;
+    lines.forEach((l) => {
+      const p = l.split(/[,\t]/).map((x) => x.trim()), no = (p[0] || '').slice(0, 20);
+      if (!no || D.flats.some((f) => flatKey(f.no) === flatKey(no))) { skipped++; return; }
+      const amt = num(p[3]);
+      D.flats.push({ id: uid(), no, owner: (p[1] || '').slice(0, 60), phone: (p[2] || '').slice(0, 20), monthly: amt > 0 ? amt : null }); added++;
+    });
+    D.flats.sort(natural); S.draft.bulk = '';
+    commit(added + ' flat jud gaye' + (skipped ? ', ' + skipped + ' chhod diye (pehle se hain ya galat line)' : ''));
+  },
+  copysum: () => {
+    const sel = () => { const ta = $('#sumtxt'); if (ta) { ta.focus(); ta.select(); } toast('Text select ho gaya, copy kar lein'); };
+    if (!navigator.clipboard) return sel();
+    navigator.clipboard.writeText(($('#sumtxt') || {}).value || '').then(() => toast('Copy ho gaya'), sel);
+  },
+  export: () => {
+    const today = ymd(new Date()); D.lastExport = today;
+    save();
+    download('society-khata-backup-' + today + '.json', JSON.stringify({ app: 'society-khata', version: 1, exportedAt: new Date().toISOString(), data: D }, null, 2));
+    toast('Backup file download ho rahi hai'); render();
+  },
+  pickfile: () => { $('#impfile').click(); },
+  importyes: () => { D = S.pending.d; S.pending = null; S.loadErr = false; commit('Backup wapas aa gaya'); },
+  importno: () => { S.pending = null; render(); },
+  resetyes: () => { S.confirm = null; D = blank(); S.draft = {}; S.editing = null; S.paying = null; commit('Khata saaf ho gaya'); },
+  install: () => {
+    const e = S.installEvt; if (!e) return; S.installEvt = null;
+    e.prompt(); (e.userChoice || Promise.resolve()).then(render, render);
+  }
+};
+
+document.addEventListener('click', (e) => { const el = e.target.closest('[data-act]'); if (el && actions[el.dataset.act]) actions[el.dataset.act](el); });
+document.addEventListener('input', (e) => { const k = e.target && e.target.dataset && e.target.dataset.k; if (k) S.draft[k] = e.target.value; });
+$('#impfile').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0]; e.target.value = '';
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) return toast('File bahut badi hai, ye khata backup nahi lagti');
+  const rd = new FileReader();
+  rd.onerror = () => toast('File padhi nahi ja saki');
+  rd.onload = () => {
+    try {
+      const raw = JSON.parse(String(rd.result)), src = raw && raw.data && typeof raw.data === 'object' ? raw.data : raw;
+      const d = normalize(raw);
+      const total = ['flats', 'payments', 'expenses'].reduce((t, k) => t + (src && Array.isArray(src[k]) ? src[k].length : 0), 0);
+      const kept = d.flats.length + d.payments.length + d.expenses.length;
+      S.pending = { d, name: file.name, skipped: Math.max(total - kept, 0) };
+      S.tab = 'setting'; render();
+    } catch (err) { toast(err instanceof SyntaxError ? 'Ye JSON file nahi hai' : err.message); }
+  };
+  rd.readAsText(file);
+});
+const onHash = () => {
+  const h = location.hash.slice(1); S.tab = TABS.some((t) => t[0] === h) ? h : 'maintenance';
+  S.paying = null; S.confirm = null; render(); window.scrollTo(0, 0);
+};
+window.addEventListener('hashchange', onHash);
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); S.installEvt = e; if (S.tab === 'setting') render(); });
+window.addEventListener('appinstalled', () => { S.installEvt = null; if (S.tab === 'setting') render(); });
+
+loadData();
+onHash();
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+})();
+</script>
+</body>
+</html>
